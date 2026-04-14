@@ -31,6 +31,17 @@ $SERVER_BIN \
 
 LLAMA_PID=$!
 
+# Wait for llama-server to be ready before starting hermes
+# Model loading takes several seconds on larger models
+echo "Waiting for llama-server to be ready..."
+for i in $(seq 1 30); do
+    if curl -s --max-time 2 http://$HOST:$PORT/v1/models > /dev/null 2>&1; then
+        echo "llama-server is ready!"
+        break
+    fi
+    sleep 1
+done
+
 # Run hermes with carnice profile
 hermes -p carnice "$@"
 HERMES_EXIT=$?
