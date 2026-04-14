@@ -56,8 +56,16 @@ brew install git cmake
 sudo apt update && sudo apt install -y build-essential git cmake
 ```
 
-### Step 3: Build llama.cpp
+### Step 3: Install llama.cpp
 
+**macOS (recommended — use Homebrew):**
+```bash
+brew install llama.cpp
+```
+
+Binary installed at: `/opt/homebrew/bin/llama-server`
+
+**Linux/Windows (build from source):**
 ```bash
 # Clone if not present
 git clone https://github.com/ggml-org/llama.cpp.git ~/llama.cpp
@@ -125,11 +133,19 @@ The wrapper script at `~/.local/bin/carnice`:
 3. Waits for hermes to exit
 4. Kills the server automatically
 
+**Note:** If using Homebrew on macOS, the binary is at `/opt/homebrew/bin/llama-server`. If building from source, it's at `$HOME/llama.cpp/build/bin/llama-server`.
+
 ```bash
 mkdir -p ~/.local/bin
 cat > ~/.local/bin/carnice << 'EOF'
 #!/bin/sh
-SERVER_BIN="$HOME/llama.cpp/build/bin/llama-server"
+# Carnice wrapper: starts llama-server before hermes, kills it when hermes exits
+
+# On macOS with Homebrew:
+SERVER_BIN="/opt/homebrew/bin/llama-server"
+# On Linux/Windows with source build:
+# SERVER_BIN="$HOME/llama.cpp/build/bin/llama-server"
+
 MODEL="$HOME/llama-models/carnice-9b-q4_k_m.gguf"
 HOST="127.0.0.1"
 PORT="8080"

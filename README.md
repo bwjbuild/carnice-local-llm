@@ -87,8 +87,16 @@ carnice-local-llm/
 
 If you prefer to do it step-by-step:
 
-### 1. Build llama.cpp
+### 1. Install llama.cpp
 
+**macOS (recommended — use Homebrew):**
+```bash
+brew install llama.cpp
+```
+
+Binary installed at: `/opt/homebrew/bin/llama-server`
+
+**Linux/Windows (build from source):**
 ```bash
 git clone https://github.com/ggml-org/llama.cpp.git ~/llama.cpp
 cd ~/llama.cpp
@@ -103,12 +111,14 @@ make LLAMA_CUDA=1
 make
 ```
 
+Binary lands at: `~/llama.cpp/build/bin/llama-server`
+
 ### 2. Download model
 
 ```bash
 mkdir -p ~/llama-models
-huggingface-cli download kai-os/Carnice-9B-Q4_K_M-GGUF carnice-9b-q4_k_m.gguf \
-    --local-dir ~/llama-models
+# Download from https://huggingface.co/kai-os/Carnice-9b-GGUF
+# Place Carnice-9b-Q4_K_M.gguf in ~/llama-models/
 ```
 
 ### 3. Install wrapper
@@ -117,21 +127,40 @@ huggingface-cli download kai-os/Carnice-9B-Q4_K_M-GGUF carnice-9b-q4_k_m.gguf \
 mkdir -p ~/.local/bin
 cat > ~/.local/bin/carnice << 'EOF'
 #!/bin/sh
-SERVER_BIN="$HOME/llama.cpp/build/bin/llama-server"
+# Carnice wrapper: starts llama-server before hermes, kills it when hermes exits
+
+# On macOS with Homebrew:
+SERVER_BIN="/opt/homebrew/bin/llama-server"
+# On Linux/Windows with source build:
+# SERVER_BIN="$HOME/llama.cpp/build/bin/llama-server"
+
 MODEL="$HOME/llama-models/carnice-9b-q4_k_m.gguf"
+HOST="127.0.0.1"
 PORT="8080"
 THREADS="8"
-LOGFILE="$HOME/.local/share/carnice/llama-server.log"
+LOGDIR="$HOME/.local/share/carnice"
+LOGFILE="$LOGDIR/llama-server.log"
 
-mkdir -p "$(dirname "$LOGFILE")"
+mkdir -p "$LOGDIR"
 pkill -f "llama-server.*${PORT}" 2>/dev/null
 sleep 1
 
-$SERVER_BIN -m "$MODEL" --host 127.0.0.1 --port $PORT -t $THREADS --reasoning off >> "$LOGFILE" 2>&1 &
+$SERVER_BIN \
+    -m "$MODEL" \
+    --host "$HOST" \
+    --port "$PORT" \
+    -t "$THREADS" \
+    --reasoning off \
+    >> "$LOGFILE" 2>&1 &
 
 LLAMA_PID=$!
+
 hermes -p carnice "$@"
+HERMES_EXIT=$?
+
 kill $LLAMA_PID 2>/dev/null
+
+exit $HERMES_EXIT
 EOF
 
 chmod +x ~/.local/bin/carnice
